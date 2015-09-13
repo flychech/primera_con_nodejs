@@ -1,6 +1,14 @@
-var express = require('express');
-var mongoose = require('mongoose');
-var bodyParser = require('body-parser');
+var express = require('express');//Para hacer el render
+var mongoose = require('mongoose');//para la base de datos
+var bodyParser = require('body-parser');//Para parsear el body
+var multer = require('multer'); //para los formularios y poder pasar archivos
+var cloudinary = require('cloudinary');//Un servidor en donde podemos subir imágenes
+
+cloudinary.config({
+	cloud_name: "dbiwlivzv",
+	api_key: "761944685346717",
+	api_secret: "mVR_rxUQ0h33iKU0j0BH-oTlkKI"
+});
 
 var app = express();
 
@@ -8,6 +16,7 @@ mongoose.connect("mongodb://localhost/primera_pagina");
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(multer({dest: "./upload"}).single('image_avatar'));
 
 //Definir el schema de los productos
 var productSchema = {
@@ -28,6 +37,14 @@ app.get("/", function(solicitud, respuesta){
 	respuesta.render("index");
 });
 
+app.get("/menu", function(solicitud, respuesta){
+	Product.find(function(error, documento){
+		if(error){ console.log(error); }
+		respuesta.render("menu/index", { products: documento });
+	});
+});
+
+//Creación de producto
 app.post("/menu", function(solicitud, respuesta){
 	//console.log(solicitud.body);
 	if(solicitud.body.password == '12345678'){
@@ -41,10 +58,20 @@ app.post("/menu", function(solicitud, respuesta){
 
 		var product = new Product(data);
 
-		product.save(function(err){
+		cloudinary.uploader.upload(solicitud.file.path, 
+			function(result) {
+				product.imageUrl = result.url;
+				product.save(function(err){
+					console.log(product);
+					respuesta.render("index");
+				});
+			}
+        );
+
+		/*product.save(function(err){
 			console.log(product);
 			respuesta.render("index");
-		});
+		});*/
 
 	}else{
 		respuesta.render("menu/new");
